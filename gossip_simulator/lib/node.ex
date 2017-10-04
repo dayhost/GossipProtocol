@@ -1,7 +1,6 @@
 defmodule GossipSimulator.Node do
     use GenServer
 
-    ## Client API
 
     @doc """
     Starts the node.
@@ -10,13 +9,17 @@ defmodule GossipSimulator.Node do
         GenServer.start_link(__MODULE__, :ok, [])
     end
 
+    def send_msg(self_pid, msg) do
+        GenServer.cast(self_pid, {:init_send, msg})
+    end
+    ## Client API
+    def set_neighbor(pid, pidList) do
+        GenServer.cast(pid, pidList)
+    end
+
     ## Server Callbacks
     def init(:ok) do
         {:ok, %{"self_pid" => nil, "neighbors" => []}}
-    end
-
-    def send_msg(self_pid, msg) do
-        GenServer.cast(self_pid, {:init_send, msg})
     end
 
     def handle_call() do
