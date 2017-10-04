@@ -10,11 +10,11 @@ defmodule GossipSimulator.Node do
     end
 
     def send_msg(self_pid, msg) do
-        GenServer.cast(self_pid, {:init_send, msg})
+        GenServer.cast(self_pid, {:send, msg})
     end
     ## Client API
     def set_neighbor(pid, pidList) do
-        GenServer.cast(pid, pidList)
+        GenServer.cast(pid, {:set_neighbor, pidList})
     end
 
     ## Server Callbacks
