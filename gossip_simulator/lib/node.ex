@@ -1,5 +1,5 @@
 defmodule GossipSimulator.Node do
-    use GenServer
+    use GenServer, restart: :transient
 
 
     @doc """
@@ -13,8 +13,8 @@ defmodule GossipSimulator.Node do
         GenServer.cast(self_pid, {:send, msg})
     end
     ## Client API
-    def set_neighbor(pid, pidList) do
-        GenServer.cast(pid, {:set_neighbor, pidList})
+    def set_neighbor(pid, self_pid, pidList) do
+        GenServer.cast(pid, {:set_neighbor, self_pid, pidList})
     end
 
     ## Server Callbacks
@@ -26,20 +26,27 @@ defmodule GossipSimulator.Node do
         
     end
 
-    def handle_cast({:set_neighbor, neighbor_list}, state) do
-        Map.update!(state, "neighbors", &(neighbor_list ++ &1))
-        {:noreply, state}
+    def handle_cast({:set_neighbor, self_pid, neighbor_list}, state) do
+        new_state = Map.update!(state, "neighbors", &(neighbor_list ++ &1))
+        new_state = Map.update!(new_state, "self_pid", &(&1=self_pid))
+        {:noreply, new_state}
     end
 
     def handle_cast({:send, msg}, state) do
         neighbor_list = Map.get(state, "neighbors")
+        #IO.puts "#{Kernel.inspect(state["neighbors"])}"
         random_number = :rand.uniform(length(neighbor_list))
         target_pid = Enum.at(neighbor_list, random_number-1)
+        IO.puts "send #{msg}"
         GenServer.cast(target_pid, {:receive, msg})
+        {:noreply, state}
     end
 
-    def handl_cast({:receive, msg}, state) do
-        send_msg(Map.get(state, "self_pid"), "asd")
+    def handle_cast({:receive, msg}, state) do
+        IO.puts "recieve #{msg}"
+        #:timer.sleep(300)
+        GenServer.cast(Map.get(state, "self_pid"), {:send, "asd"})
+        {:noreply, state}
     end
 
 end
