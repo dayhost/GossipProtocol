@@ -5,30 +5,34 @@ defmodule GossipSimulator.GPNode do
     @doc """
     Starts the node.
     """
-    def start_link() do
-        GenServer.start_link(__MODULE__, :ok, [])
+    def start_link(node_id) do
+        GenServer.start_link(__MODULE__, [:ok, node_id], [])
     end
 
     def send_msg(self_pid, msg) do
         GenServer.cast(self_pid, {:send, msg})
     end
     ## Client API
-    def set_neighbor(pid, self_pid, pidList) do
-        GenServer.cast(pid, {:set_neighbor, self_pid, pidList})
+    def set_neighbor(pid, pidList) do
+        GenServer.cast(pid, {:set_neighbor, pidList})
     end
 
     ## Server Callbacks
-    def init(:ok) do
-        {:ok, %{"self_pid" => nil, "neighbors" => []}}
+    def init([:ok, node_id]) do
+        {:ok, %{"s" => node_id, "neighbors" => [], "counter" => 0}}
+    end
+
+    def terminate(reason, state) do
+        IO.puts "#{inspect self()} stops because #{inspect reason}."
+        :ok 
     end
 
     def handle_call() do
         
     end
 
-    def handle_cast({:set_neighbor, self_pid, neighbor_list}, state) do
+    def handle_cast({:set_neighbor, neighbor_list}, state) do
         new_state = Map.update!(state, "neighbors", &(neighbor_list ++ &1))
-        new_state = Map.update!(new_state, "self_pid", &(&1=self_pid))
         {:noreply, new_state}
     end
 
@@ -37,16 +41,29 @@ defmodule GossipSimulator.GPNode do
         #IO.puts "#{Kernel.inspect(state["neighbors"])}"
         random_number = :rand.uniform(length(neighbor_list))
         target_pid = Enum.at(neighbor_list, random_number-1)
-        IO.puts "#{Kernel.inspect(state["self_pid"])} sends #{msg} to #{Kernel.inspect(target_pid)}."
-        GenServer.cast(target_pid, {:receive, msg})    
+        IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}."
+        GenServer.cast(target_pid, {:receive, msg})   
+        :timer.sleep(1000)   
         {:noreply, state}
     end
 
     def handle_cast({:receive, msg}, state) do
-        IO.puts "#{Kernel.inspect(state["self_pid"])} receives #{msg}."
+        IO.puts "#{inspect(self())} receives #{msg}."
         # :timer.sleep(300)
-        GenServer.cast(Map.get(state, "self_pid"), {:send, msg})
-        {:noreply, state}
+        new_state = Map.update!(state, "counter", &(&1+1))
+        if is_converge(new_state["counter"]) do
+            GenServer.cast(self(), {:stop})
+        else
+            GenServer.cast(self(), {:send, msg})
+        end     
+        {:noreply, new_state}
     end
 
+    def is_converge(counter) do
+        counter == 5
+    end
+
+    def handle_cast({:stop}, state) do
+        {:stop, :normal, state}
+    end
 end
