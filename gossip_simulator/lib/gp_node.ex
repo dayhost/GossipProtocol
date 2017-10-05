@@ -24,7 +24,7 @@ defmodule GossipSimulator.GPNode do
 
     def terminate(reason, state) do
         IO.puts "#{inspect self()} stops because #{inspect reason}."
-        :ok 
+        :normal
     end
 
     def handle_call() do
@@ -65,5 +65,6 @@ defmodule GossipSimulator.GPNode do
 
     def handle_cast({:stop}, state) do
         {:stop, :normal, state}
+        # {:stop, :shutdown, state}
     end
 end
