@@ -17,5 +17,11 @@ defmodule GossipSimulator.Controller do
         GossipSimulator.Node.set_neighbor(pid1, pid1, [pid2])
         GossipSimulator.Node.set_neighbor(pid2, pid2, [pid1])
         GossipSimulator.Node.send_msg(pid1, "aaa")
+        stay()
+    end
+
+    def stay() do
+        :timer.sleep(100)
+        stay()
     end
 end

@@ -44,7 +44,7 @@ defmodule GossipSimulator.Node do
 
     def handle_cast({:receive, msg}, state) do
         IO.puts "recieve #{msg}"
-        #:timer.sleep(300)
+        :timer.sleep(300)
         GenServer.cast(Map.get(state, "self_pid"), {:send, "asd"})
         {:noreply, state}
     end
