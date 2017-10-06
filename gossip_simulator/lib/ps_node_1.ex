@@ -1,4 +1,4 @@
-defmodule GossipSimulator.PSNode do
+defmodule GossipSimulator.PSNode_1 do
     use GenServer, restart: :transient
 
 

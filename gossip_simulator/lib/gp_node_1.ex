@@ -1,5 +1,5 @@
-defmodule GossipSimulator.GPNode do
-    use GenServer, restart: :transient 
+defmodule GossipSimulator.GPNode_1 do
+    use GenServer, restart: :transient
 
 
     @doc """
@@ -28,6 +28,10 @@ defmodule GossipSimulator.GPNode do
         :ok 
     end
 
+    def handle_call() do
+        
+    end
+
     def handle_cast({:set_neighbor, neighbor_list}, state) do
         new_state = Map.update!(state, "neighbors", &(neighbor_list ++ &1))
         {:noreply, new_state}
@@ -35,23 +39,22 @@ defmodule GossipSimulator.GPNode do
 
     def handle_cast({:send, msg}, state) do
         if !is_nil(state) do
+            if is_converge(state["counter"]) do
+                GenServer.cast(self(), {:stop})
+            end
             neighbor_list = Map.get(state, "neighbors")
             if length(neighbor_list) != 0 do
                 #IO.puts "#{Kernel.inspect(state["neighbors"])}"
                 random_number = :rand.uniform(length(neighbor_list))
                 target_pid = Enum.at(neighbor_list, random_number-1)
-                if Process.alive?(target_pid) do
-                    IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}, counter: #{inspect(state["counter"])}."
-                    GenServer.cast(target_pid, {:receive, msg}) 
-                else
-                    new_state = Map.update!(state, "neighbors", &(List.delete(&1, target_pid)))
-                end  
-                # :timer.sleep(1000) 
-                GenServer.cast(self(), {:send, msg}) 
-                {:noreply, new_state} 
+                IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}, counter: #{inspect(state["counter"])}."
+                GenServer.cast(target_pid, {:receive, msg})   
+                # :timer.sleep(2000) 
+                GenServer.cast(self(), {:send, msg})  
             else
                 GenServer.cast(self(), {:stop})
             end
+            {:noreply, state}
         end
     end
 
@@ -70,14 +73,14 @@ defmodule GossipSimulator.GPNode do
         {:noreply, new_state}
     end
 
-    # def handle_cast({:send_stop, stopped_pid}, state) do
-    #     new_state = Map.update!(state, "neighbors", &(List.delete(&1, stopped_pid)))
-    #     # If the node is isolated, stop it
-    #     if is_isolate(new_state["neighbors"]) do
-    #         GenServer.cast(self(), {:stop})
-    #     end
-    #     {:noreply, new_state}
-    # end
+    def handle_cast({:send_stop, stopped_pid}, state) do
+        new_state = Map.update!(state, "neighbors", &(List.delete(&1, stopped_pid)))
+        # If the node is isolated, stop it
+        if is_isolate(new_state["neighbors"]) do
+            GenServer.cast(self(), {:stop})
+        end
+        {:noreply, new_state}
+    end
 
     def is_converge(counter) do
         counter >= 10
@@ -88,7 +91,13 @@ defmodule GossipSimulator.GPNode do
     end
 
     def handle_cast({:stop}, state) do
-        {:stop, :normal, state}
-        # {:stop, :shutdown, state}
+        if !is_nil(state) do
+            neighbors = state["neighbors"]
+            if length(neighbors) != 0 do
+                Enum.map(neighbors, fn(x) -> GenServer.cast(x, {:send_stop, self()}) end)
+            end    
+            {:stop, :normal, state}
+            # {:stop, :shutdown, state}
+        end   
     end
 end
