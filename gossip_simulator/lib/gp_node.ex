@@ -24,7 +24,7 @@ defmodule GossipSimulator.GPNode do
 
     def terminate(reason, state) do
         IO.puts "#{inspect self()} stops because #{inspect reason}."
-        :normal
+        :ok 
     end
 
     def handle_call() do
@@ -43,24 +43,28 @@ defmodule GossipSimulator.GPNode do
         target_pid = Enum.at(neighbor_list, random_number-1)
         IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}."
         GenServer.cast(target_pid, {:receive, msg})   
-        :timer.sleep(1000)   
+        # :timer.sleep(1000) 
+        GenServer.cast(self(), {:send, msg})  
         {:noreply, state}
     end
 
     def handle_cast({:receive, msg}, state) do
         IO.puts "#{inspect(self())} receives #{msg}."
-        # :timer.sleep(300)
         new_state = Map.update!(state, "counter", &(&1+1))
+        IO.puts "#{inspect(self())} current counter is #{inspect(new_state["counter"])}"
         if is_converge(new_state["counter"]) do
+            # The node is converge, stop sending process and the genserver. 
             GenServer.cast(self(), {:stop})
-        else
-            GenServer.cast(self(), {:send, msg})
-        end     
+        end    
+        if new_state["counter"] == 1 do
+           # First time receive, then send msg continuously
+           GenServer.cast(self(), {:send, msg}) 
+        end    
         {:noreply, new_state}
     end
 
     def is_converge(counter) do
-        counter == 5
+        counter >= 5
     end
 
     def handle_cast({:stop}, state) do
