@@ -64,7 +64,7 @@ defmodule GossipSimulator.GPNode do
     end
 
     def is_converge(counter) do
-        counter >= 5
+        counter >= 100
     end
 
     def handle_cast({:stop}, state) do
