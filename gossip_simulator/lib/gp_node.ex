@@ -81,7 +81,7 @@ defmodule GossipSimulator.GPNode do
     end
 
     def is_converge(counter) do
-        counter >= 5
+        counter >= 10
     end
 
     def is_isolate(neighbor_list) do
