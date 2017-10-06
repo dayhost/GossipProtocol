@@ -10,7 +10,7 @@ defmodule GossipSimulator.GPNode do
     end
 
     def send_msg(self_pid, msg) do
-        GenServer.cast(self_pid, {:send, msg})
+        GenServer.cast(self_pid, {:receive, msg})
     end
     ## Client API
     def set_neighbor(pid, pidList) do
@@ -23,6 +23,7 @@ defmodule GossipSimulator.GPNode do
     end
 
     def terminate(reason, state) do
+        IO.puts "======="
         IO.puts "#{inspect self()} stops because #{inspect reason}."
         :ok 
     end
@@ -37,14 +38,21 @@ defmodule GossipSimulator.GPNode do
     end
 
     def handle_cast({:send, msg}, state) do
+        if is_converge(state["counter"]) do
+            GenServer.cast(self(), {:stop})
+        end
         neighbor_list = Map.get(state, "neighbors")
-        #IO.puts "#{Kernel.inspect(state["neighbors"])}"
-        random_number = :rand.uniform(length(neighbor_list))
-        target_pid = Enum.at(neighbor_list, random_number-1)
-        IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}."
-        GenServer.cast(target_pid, {:receive, msg})   
-        # :timer.sleep(1000) 
-        GenServer.cast(self(), {:send, msg})  
+        if length(neighbor_list) != 0 do
+            #IO.puts "#{Kernel.inspect(state["neighbors"])}"
+            random_number = :rand.uniform(length(neighbor_list))
+            target_pid = Enum.at(neighbor_list, random_number-1)
+            IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}, counter: #{inspect(state["counter"])}."
+            GenServer.cast(target_pid, {:receive, msg})   
+            # :timer.sleep(2000) 
+            GenServer.cast(self(), {:send, msg})  
+        else
+            GenServer.cast(self(), {:stop})
+        end
         {:noreply, state}
     end
 
@@ -63,11 +71,26 @@ defmodule GossipSimulator.GPNode do
         {:noreply, new_state}
     end
 
+    def handle_cast({:send_stop, stopped_pid}, state) do
+        new_state = Map.update!(state, "neighbors", &(List.delete(&1, stopped_pid)))
+        # If the node is isolated, stop it
+        if is_isolate(new_state["neighbors"]) do
+            GenServer.cast(self(), {:stop})
+        end
+        {:noreply, new_state}
+    end
+
     def is_converge(counter) do
-        counter >= 100
+        counter >= 5
+    end
+
+    def is_isolate(neighbor_list) do
+        length(neighbor_list) == 0
     end
 
     def handle_cast({:stop}, state) do
+        neighbors = state["neighbors"]
+        Enum.map(neighbors, fn(x) -> GenServer.cast(x, {:send_stop, self()}) end)
         {:stop, :normal, state}
         # {:stop, :shutdown, state}
     end
