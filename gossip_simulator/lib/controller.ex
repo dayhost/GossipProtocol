@@ -5,36 +5,74 @@ defmodule GossipSimulator.Controller do
             "gossip" ->
                 pidList = Enum.map(1..numNodes, fn x -> elem(GossipSimulator.GPNode.start_link(x), 1) end)
                 start_pid = get_start_node(pidList)
-                gossip_trigger(start_pid, pidList)
+                neighbors_map =
+                    case topology do
+                        "2D"->
+                            GossipSimulator.Topology.get_topology_2d(pidList)
+                        "line"->
+                            GossipSimulator.Topology.get_topology_line(pidList)
+                        "full"->
+                            GossipSimulator.Topology.get_topology_all(pidList)
+                        "imp2D"->
+                            GossipSimulator.Topology.get_topology_inp_2d(pidList)
+                    end
+                keys = Map.keys(neighbors_map)
+                gossip_set_neighbors(neighbors_map, keys)
+                gossip_trigger(start_pid)
             "push-sum" ->
                 pidList = Enum.map(1..numNodes, fn x -> elem(GossipSimulator.PSNode.start_link(x), 1) end)
                 start_pid = get_start_node(pidList)
-                ps_trigger(start_pid, pidList)
+                neighbors_map =
+                case topology do
+                    "2D"->
+                        GossipSimulator.Topology.get_topology_2d(pidList)
+                    "line"->
+                        GossipSimulator.Topology.get_topology_line(pidList)
+                    "full"->
+                        GossipSimulator.Topology.get_topology_all(pidList)
+                    "imp2D"->
+                        GossipSimulator.Topology.get_topology_inp_2d(pidList)
+                end
+                keys = Map.keys(neighbors_map)
+                ps_set_neighbors(neighbors_map, keys)
+                ps_trigger(start_pid)
         end
         
         IO.puts Kernel.inspect(pidList)
         stay()
     end
-    
-    # This is only for test, without toplogy nodel
-    defp gossip_trigger(start_pid, pidList) do
-        {pid1, pidList} = List.pop_at(pidList, 0)
-        {pid2, pidList}  = List.pop_at(pidList, 0)
-        {pid3, pidList}  = List.pop_at(pidList, 0)
-        GossipSimulator.GPNode.set_neighbor(pid1, [pid2, pid3])
-        GossipSimulator.GPNode.set_neighbor(pid2, [pid1, pid3])
-        GossipSimulator.GPNode.set_neighbor(pid3, [pid1, pid2])
-        GossipSimulator.GPNode.send_msg(start_pid, "aaa")
+
+    defp gossip_set_neighbors(neighbors_map, keys) do
+        case neighbors_map==%{} do
+            true->
+                "finish"
+            false->
+                {key, keys} = List.pop_at(keys, 0)
+                {neighbor, neighbors_map} = Map.pop(neighbors_map, key)
+                GossipSimulator.GPNode.set_neighbor(key, neighbor)
+                gossip_set_neighbors(neighbors_map, keys)
+        end
+    end
+
+    defp ps_set_neighbors(neighbors_map, keys) do
+        case neighbors_map==%{} do
+            true->
+                "finish"
+            false->
+                {key, keys} = List.pop_at(keys, 0)
+                {neighbor, neighbors_map} = Map.pop(neighbors_map, key)
+                GossipSimulator.PSNode.set_neighbor(key, neighbor)
+                gossip_set_neighbors(neighbors_map, keys)
+        end
     end
 
     # This is only for test, without toplogy nodel
-    defp ps_trigger(start_pid, pidList) do
-        {pid1, pidList} = List.pop_at(pidList, 0)
-        {pid2, pidList}  = List.pop_at(pidList, 0)
-        {pid3, pidList}  = List.pop_at(pidList, 0)
-        GossipSimulator.GPNode.set_neighbor(pid1, [pid2, pid3])
-        GossipSimulator.GPNode.set_neighbor(pid2, [pid1, pid3])
-        GossipSimulator.GPNode.set_neighbor(pid3, [pid1, pid2])
+    defp gossip_trigger(start_pid) do
+        GossipSimulator.GPNode.send_msg(start_pid, "msg")
+    end
+
+    # This is only for test, without toplogy nodel
+    defp ps_trigger(start_pid) do
         GossipSimulator.PSNode.send_msg(start_pid)
     end
 
