@@ -9,7 +9,7 @@ defmodule GossipSimulator.Topology do
 
     def get_topology_2d(pidList) do
         row = round(:math.sqrt(length(pidList)))
-        IO.puts "the row for 2d is #{row}"
+        # IO.puts "the row for 2d is #{row}"
         get_neighbor_for_2d(pidList, 0, %{}, row)
     end
 

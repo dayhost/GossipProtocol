@@ -1,10 +1,11 @@
 defmodule GossipSimulator.Controller do
     def startNodes(numNodes, topology, algorithm) do
-        pidList = []
+        # pidList = []
         case algorithm do
             "gossip" ->
                 pidList = Enum.map(1..numNodes, fn x -> elem(GossipSimulator.GPNode.start_link(x), 1) end)
                 start_pid = get_start_node(pidList)
+                IO.puts "Build topology."
                 neighbors_map =
                     case topology do
                         "2D"->
@@ -16,19 +17,22 @@ defmodule GossipSimulator.Controller do
                         "imp2D"->
                             GossipSimulator.Topology.get_topology_inp_2d(pidList)
                     end
-                start_timer = System.system_time(:microsecond)
-                IO.puts "=============Start time: #{inspect start_timer}"
+                # IO.puts "#{inspect neighbors_map}"
+                # :timer.sleep(1000000)
+                start_timer = System.system_time(:millisecond)
+                # IO.puts "=============Start time: #{inspect start_timer}"
                 keys = Map.keys(neighbors_map)
                 gossip_set_neighbors(neighbors_map, keys)
                 gossip_trigger(start_pid)
                 # monitor_nodes = Task.async(fn pidList -> monitor_nodes(pidList) end)
                 end_timer = monitor_nodes(pidList)
-                IO.puts "=============End time: #{inspect end_timer}"
+                # IO.puts "=============End time: #{inspect end_timer}"
                 duration = (end_timer - start_timer) / 1000
-                IO.puts "Running time is #{inspect duration}."
+                # IO.puts "Running time is #{inspect duration}."
             "push-sum" ->
                 pidList = Enum.map(1..numNodes, fn x -> elem(GossipSimulator.PSNode.start_link(x), 1) end)
                 start_pid = get_start_node(pidList)
+                IO.puts "Build topology."
                 neighbors_map =
                 case topology do
                     "2D"->
@@ -40,20 +44,18 @@ defmodule GossipSimulator.Controller do
                     "imp2D"->
                         GossipSimulator.Topology.get_topology_inp_2d(pidList)
                 end
-                start_timer = System.system_time(:microsecond)
-                IO.puts "=============Start time: #{inspect start_timer}"
+                start_timer = System.system_time(:millisecond)
+                IO.puts "Start protocol."
+                IO.puts "=============Start time: #{inspect start_timer} millisecond."
                 keys = Map.keys(neighbors_map)
                 ps_set_neighbors(neighbors_map, keys)
                 ps_trigger(start_pid)
                 # monitor_nodes = Task.async(fn pidList -> monitor_nodes(pidList) end)
                 end_timer = monitor_nodes(pidList)
-                IO.puts "=============End time: #{inspect end_timer}"
-                duration = (end_timer - start_timer) / 1000
-                IO.puts "Running time is #{inspect duration}."               
+                IO.puts "=============End time: #{inspect end_timer} millisecond."
+                duration = (end_timer - start_timer)
+                IO.puts "Running time: #{inspect duration} millisecond."               
         end
-        
-        # IO.puts Kernel.inspect(pidList)
-        # stay()
     end
 
     defp gossip_set_neighbors(neighbors_map, keys) do
@@ -92,20 +94,22 @@ defmodule GossipSimulator.Controller do
 
     defp get_start_node(pidList) do
         random_number = :rand.uniform(length(pidList))
-        start_pid = Enum.at(pidList, random_number-1)
+        Enum.at(pidList, random_number-1)
     end
 
-    def stay() do
-        :timer.sleep(100)
-        stay()
-    end
+    # def stay() do
+    #     :timer.sleep(100)
+    #     stay()
+    # end
 
     defp monitor_nodes(pid_list) do
         # If ture keep loop, otherwise
         if check_alive(pid_list) do
+            # IO.puts "Some pids live."
             monitor_nodes(pid_list)     
         else
-            System.system_time(:microsecond)
+            # IO.puts "All pids die."
+            System.system_time(:millisecond)
         end
     end
 

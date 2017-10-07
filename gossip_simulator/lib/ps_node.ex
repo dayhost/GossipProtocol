@@ -23,8 +23,8 @@ defmodule GossipSimulator.PSNode do
     end
 
     def terminate(reason, state) do
-        IO.puts "======="
-        IO.puts "#{inspect self()} stops because #{inspect reason}."
+        # IO.puts "======="
+        # IO.puts "#{inspect self()} stops because #{inspect reason}."
         :ok 
     end
 
@@ -43,28 +43,28 @@ defmodule GossipSimulator.PSNode do
             if length(neighbor_list) != 0 do
                 # Random pick one neighbor from its neightbor list
                 neighbor_list = Map.get(state, "neighbors")
-                IO.puts "#{inspect state}"
+                # IO.puts "#{inspect state}"
                 random_number = :rand.uniform(length(neighbor_list))
                 target_pid = Enum.at(neighbor_list, random_number-1)
                 if Process.alive?(target_pid) do
                     s = adjust_precision(state["s"])
                     w = adjust_precision(state["w"])
                     msg = {Float.round(s/2, 15), Float.round(w/2, 15)}
-                    new_state = Map.update!(state, "s", &(&1=Float.round(s/2, 15)))
-                    new_state = Map.update!(new_state, "w", &(&1=Float.round(w/2, 15)))
-                    new_state = Map.update!(new_state, "start_send", &(&1=true)) 
-                    IO.puts "#{inspect(self())} sends #{inspect(msg)} to #{inspect(target_pid)}."
+                    state = Map.update!(state, "s", &(&1=Float.round(s/2, 15)))
+                    state = Map.update!(state, "w", &(&1=Float.round(w/2, 15)))
+                    state = Map.update!(state, "start_send", &(&1=true)) 
+                    # IO.puts "#{inspect(self())} sends #{inspect(msg)} to #{inspect(target_pid)}."
                     # :timer.sleep(1000) 
                     GenServer.cast(target_pid, {:receive, msg}) 
                 else
-                    new_state = Map.update!(state, "neighbors", &(List.delete(&1, target_pid)))
+                    state = Map.update!(state, "neighbors", &(List.delete(&1, target_pid)))
                 end
                 GenServer.cast(self(), {:send})
             else
                 GenServer.cast(self(), {:stop})
             end 
         end
-        {:noreply, new_state}
+        {:noreply, state}
     end
 
     def handle_cast({:send_stop, stopped_pid}, state) do
@@ -83,7 +83,7 @@ defmodule GossipSimulator.PSNode do
     def handle_cast({:receive, msg}, state) do
         # After receiving, update self state, then call the send callback. 
         if !is_nil(state) do
-            IO.puts "#{inspect(self())} receives #{inspect(msg)}."
+            # IO.puts "#{inspect(self())} receives #{inspect(msg)}."
             {rcv_s, rcv_w} = msg
             new_state = Map.update!(state, "s", &(&1 + rcv_s))
             new_state = Map.update!(new_state, "w", &(&1 + rcv_w))
@@ -99,7 +99,7 @@ defmodule GossipSimulator.PSNode do
             end
     
             # check whether it is first received, if so start the send loop, otherwise ignore.
-            IO.puts "#{inspect(self())} starts to send? #{inspect state["start_send"]}"
+            # IO.puts "#{inspect(self())} starts to send? #{inspect state["start_send"]}"
             if !state["start_send"] do
                 GenServer.cast(self(), {:send})
             end 
@@ -115,7 +115,7 @@ defmodule GossipSimulator.PSNode do
         diff_1 = abs(second_r - first_r)
         diff_2 = abs(third_r - second_r)
         thread_hold = :math.pow(10, -10)
-        IO.puts "converge? #{inspect diff_1 <= thread_hold and diff_2 <= thread_hold}"
+        # IO.puts "converge? #{inspect diff_1 <= thread_hold and diff_2 <= thread_hold}"
         diff_1 <= thread_hold and diff_2 <= thread_hold
     end
 
