@@ -30,7 +30,7 @@ defmodule GossipSimulator.GPNode do
 
     def handle_cast({:set_neighbor, neighbor_list}, state) do
         new_state = Map.update!(state, "neighbors", &(neighbor_list ++ &1))
-        :timer.sleep(1000)
+        # :timer.sleep(1000)
         {:noreply, new_state}
     end
 
@@ -41,14 +41,14 @@ defmodule GossipSimulator.GPNode do
                 # IO.puts "#{Kernel.inspect(state["neighbors"])}"
                 random_number = :rand.uniform(length(neighbor_list))
                 target_pid = Enum.at(neighbor_list, random_number-1)
-                # IO.puts "#{inspect(target_pid)}, is alive? #{inspect Process.alive?(target_pid)}"
+                IO.puts "#{inspect(target_pid)}, is alive? #{inspect Process.alive?(target_pid)}"
                 if Process.alive?(target_pid) do
                     # IO.puts "#{inspect(self())} sends #{msg} to #{inspect(target_pid)}, counter: #{inspect(state["counter"])}."
                     GenServer.cast(target_pid, {:receive, msg})
                 else
                     state = Map.update!(state, "neighbors", &(List.delete(&1, target_pid)))
                 end  
-                # :timer.sleep(1000) 
+                # :timer.sleep(1) 
                 GenServer.cast(self(), {:send, msg}) 
             else
                 GenServer.cast(self(), {:stop})
